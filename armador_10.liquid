@@ -1,0 +1,689 @@
+{{ index_for_top_components }}
+
+{% render 'theme_breadcrumbs' %}
+
+<main>
+
+{%- comment -%} ============ DATOS DEL CATÁLOGO (Liquid, lado servidor) ============ {%- endcomment -%}
+{% assign armador = nil %}
+{% for category in categories %}{% if category.name contains 'Armador' %}{% assign armador = category %}{% endif %}{% endfor %}
+
+<script>
+window.ARMADOR_DATA = [
+{% if armador %}{% for sub in armador.subcategories %}
+  {
+    "name": "{{ sub.name | strip_newlines | escape }}",
+    "permalink": "{{ sub.permalink }}",
+    "role": "{% if sub.name == 'Aros' %}aros{% elsif sub.name == 'Mazas delanteras' %}maza_del{% elsif sub.name == 'Mazas traseras' %}maza_tra{% elsif sub.name contains 'cleo' %}nucleo{% elsif sub.name contains 'Rayos' %}rayos{% elsif sub.name contains 'Armado' %}armado{% else %}otro{% endif %}",
+    "products": [
+      {% for p in sub.products %}{
+        "id": {{ p.id }},
+        "name": "{{ p.name | strip_newlines | escape }}",
+        "permalink": "{{ p.permalink }}",
+        "options": [
+          {% for o in p.options %}{ "option_id": {{ o.id }}, "name": "{{ o.name | strip_newlines | escape }}", "values": [
+            {% for v in o.values %}{ "valueid": {{ v.id }}, "name": "{{ v.name | strip_newlines | escape }}" }{% unless forloop.last %},{% endunless %}{% endfor %}
+          ] }{% unless forloop.last %},{% endunless %}{% endfor %}
+        ]
+      }{% unless forloop.last %},{% endunless %}{% endfor %}
+    ]
+  }{% unless forloop.last %},{% endunless %}{% endfor %}{% endif %}
+];
+</script>
+
+<style>
+#arm-app{max-width:1100px;margin:24px auto;padding:0 16px;font-family:inherit;color:#1a1a1a;}
+#arm-app *{box-sizing:border-box;}
+.arm-title{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-.5px;}
+.arm-sub{color:#666;margin:0 0 24px;font-size:15px;}
+.arm-grid{display:grid;grid-template-columns:1fr 340px;gap:28px;align-items:start;}
+@media(max-width:840px){.arm-grid{grid-template-columns:1fr;}}
+.arm-step{margin-bottom:26px;}
+.arm-step h3{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#999;margin:0 0 12px;font-weight:700;}
+.arm-step h3 .n{display:inline-flex;width:22px;height:22px;border-radius:50%;background:#1a1a1a;color:#fff;align-items:center;justify-content:center;font-size:12px;margin-right:8px;}
+.arm-step h3 .hint{text-transform:none;color:#bbb;font-weight:400;}
+.arm-wheel{margin:6px 0 14px;font-size:15px;font-weight:800;color:#1a1a1a;padding-top:14px;border-top:2px solid #1a1a1a;}
+.arm-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+.arm-card{border:2px solid #e6e6e6;border-radius:12px;padding:12px;cursor:pointer;transition:.15s;background:#fff;position:relative;}
+.arm-card:hover{border-color:#bbb;}
+.arm-card.sel{border-color:#1a1a1a;box-shadow:0 2px 0 #1a1a1a;}
+.arm-card.sel::after{content:'✓';position:absolute;top:8px;right:10px;font-size:12px;font-weight:800;color:#1a1a1a;}
+.arm-card .nm{font-weight:600;font-size:13px;line-height:1.3;margin-bottom:4px;}
+.arm-card small{display:block;font-size:11px;line-height:1.35;margin-bottom:6px;}
+.arm-card .pr{font-size:13px;color:#1a1a1a;font-weight:700;}
+.arm-vals{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.arm-val{border:2px solid #e6e6e6;border-radius:9px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;transition:.15s;background:#fff;}
+.arm-val:hover{border-color:#bbb;}
+.arm-val.sel{border-color:#1a1a1a;background:#1a1a1a;color:#fff;}
+.arm-val.out{opacity:.4;cursor:not-allowed;text-decoration:line-through;}
+.arm-sizes{display:flex;flex-wrap:wrap;gap:10px;}
+.arm-size{border:2px solid #e6e6e6;border-radius:12px;padding:14px 22px;cursor:pointer;font-size:16px;font-weight:800;transition:.15s;background:#fff;}
+.arm-size:hover{border-color:#bbb;}
+.arm-size.sel{border-color:#1a1a1a;background:#1a1a1a;color:#fff;}
+.arm-toggle{display:inline-flex;border:2px solid #e6e6e6;border-radius:10px;overflow:hidden;flex-wrap:wrap;}
+.arm-toggle button{border:0;background:#fff;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;color:#666;}
+.arm-toggle button.sel{background:#1a1a1a;color:#fff;}
+.arm-empty{color:#999;font-size:13px;font-style:italic;padding:10px 0;}
+.arm-side{background:#f7f7f7;border-radius:16px;padding:22px;position:sticky;top:20px;}
+.arm-side h4{margin:0 0 16px;font-size:16px;font-weight:800;}
+.arm-line{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid #ececec;gap:8px;}
+.arm-line.sub{font-weight:800;color:#1a1a1a;border-bottom:0;padding-bottom:0;padding-top:10px;}
+.arm-line .l{color:#555;}
+.arm-line .v{font-weight:600;text-align:right;white-space:nowrap;}
+.arm-total{display:flex;justify-content:space-between;font-size:20px;font-weight:800;margin:16px 0 18px;}
+.arm-btn{width:100%;border:0;background:#1a1a1a;color:#fff;padding:15px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;}
+.arm-btn:hover:not(:disabled){background:#333;}
+.arm-btn:disabled{background:#ccc;cursor:not-allowed;}
+.arm-msg{margin-top:12px;font-size:13px;padding:10px;border-radius:8px;display:none;}
+.arm-msg.err{background:#fde8e8;color:#9b1c1c;display:block;}
+.arm-msg.ok{background:#e6f6ed;color:#1c6b3c;display:block;}
+.arm-loading{padding:40px;text-align:center;color:#999;}
+</style>
+
+<div id="arm-app">
+  <h1 class="arm-title">Arma tu Rueda</h1>
+  <p class="arm-sub">Elige cada componente y nosotros la armamos. El precio se actualiza solo.</p>
+  <div id="arm-loading" class="arm-loading">Cargando componentes…</div>
+  <div id="arm-grid" class="arm-grid" style="display:none;">
+    <div id="arm-steps"></div>
+    <div class="arm-side">
+      <div id="arm-3d"></div>
+      <h4>Tu pedido</h4>
+      <div id="arm-summary"></div>
+      <div class="arm-total"><span>Total</span><span id="arm-total">$0</span></div>
+      <button id="arm-add" class="arm-btn" disabled>Agregar al carro</button>
+      <div id="arm-msg" class="arm-msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var DATA = window.ARMADOR_DATA || [];
+  var byRole = {};
+  DATA.forEach(function(s){ (byRole[s.role] = byRole[s.role] || []).push(s); });
+  function role(r){ var a=byRole[r]||[]; return a.length?a[0].products:[]; }
+
+  var fmt = function(n){ return '$' + Math.round(n).toLocaleString('es-CL'); };
+
+  // Precio del armado CON tu descuento interno (promo en el carro). Por rueda (el par cobra x2).
+  var ARMADO_PROMO = 10000;
+
+  // Tabla de largos de rayo (planilla del Drive). aro+tamaño+maza+posición+hoyos -> IZQ/DER (mm)
+  var TABLA_LARGOS = [
+    {aro:'ENDURO H30',tam:'29"',maza:'Maza delantera',pos:'Delantera',hoyos:'32H',izq:288,der:288},
+    {aro:'ENDURO H30',tam:'27.5"',maza:'Maza delantera',pos:'Delantera',hoyos:'32H',izq:270,der:270},
+    {aro:'E30 ULTRA',tam:'29"',maza:'Maza delantera',pos:'Delantera',hoyos:'32H',izq:288,der:288},
+    {aro:'E30 ULTRA',tam:'27.5"',maza:'Maza delantera',pos:'Delantera',hoyos:'32H',izq:270,der:270},
+    {aro:'ENDURO H30',tam:'29"',maza:'ULTRA',pos:'Trasera',hoyos:'28H',izq:294,der:292},
+    {aro:'ENDURO H30',tam:'29"',maza:'ULTRA',pos:'Trasera',hoyos:'32H',izq:288,der:288},
+    {aro:'ENDURO H30',tam:'29"',maza:'TRAIL',pos:'Trasera',hoyos:'28H',izq:294,der:292},
+    {aro:'ENDURO H30',tam:'29"',maza:'TRAIL',pos:'Trasera',hoyos:'32H',izq:288,der:288},
+    {aro:'ENDURO H30',tam:'27.5"',maza:'ULTRA',pos:'Trasera',hoyos:'28H',izq:274,der:274},
+    {aro:'ENDURO H30',tam:'27.5"',maza:'ULTRA',pos:'Trasera',hoyos:'32H',izq:270,der:270},
+    {aro:'ENDURO H30',tam:'27.5"',maza:'TRAIL',pos:'Trasera',hoyos:'28H',izq:274,der:274},
+    {aro:'ENDURO H30',tam:'27.5"',maza:'TRAIL',pos:'Trasera',hoyos:'32H',izq:270,der:270},
+    {aro:'E30 ULTRA',tam:'29"',maza:'ULTRA',pos:'Trasera',hoyos:'28H',izq:294,der:292},
+    {aro:'E30 ULTRA',tam:'29"',maza:'ULTRA',pos:'Trasera',hoyos:'32H',izq:288,der:288},
+    {aro:'E30 ULTRA',tam:'29"',maza:'TRAIL',pos:'Trasera',hoyos:'28H',izq:294,der:292},
+    {aro:'E30 ULTRA',tam:'29"',maza:'TRAIL',pos:'Trasera',hoyos:'32H',izq:288,der:288},
+    {aro:'E30 ULTRA',tam:'27.5"',maza:'ULTRA',pos:'Trasera',hoyos:'28H',izq:274,der:274},
+    {aro:'E30 ULTRA',tam:'27.5"',maza:'ULTRA',pos:'Trasera',hoyos:'32H',izq:270,der:270},
+    {aro:'E30 ULTRA',tam:'27.5"',maza:'TRAIL',pos:'Trasera',hoyos:'28H',izq:276,der:274},
+    {aro:'E30 ULTRA',tam:'27.5"',maza:'TRAIL',pos:'Trasera',hoyos:'32H',izq:272,der:270}
+  ];
+
+  // Estado. Individual usa sel.aro/maza/etc. El par usa sel.par.{d,t}.
+  var sel = { tipo:'tra', size:null, aro:null, aroVal:null, maza:null, mazaVal:null,
+              nucleo:null, nucleoVal:null, rayosNiples:false, golilla:false, armado:null, armadoVal:null,
+              par:{ d:{size:null,aro:null,aroVal:null,maza:null,mazaVal:null},
+                    t:{size:null,aro:null,aroVal:null,maza:null,mazaVal:null,nucleo:null,nucleoVal:null} } };
+
+  function sizeOf(name){
+    var s=(name||'').toUpperCase().replace(/\s+/g,'');
+    if(/27[.,]?5/.test(s) || /(^|[^0-9])275([^0-9]|$)/.test(s)) return '27.5';
+    if(/29/.test(s)) return '29';
+    if(/(^|[^0-9])26([^0-9]|$)/.test(s)) return '26';
+    if(/700/.test(s)) return '700c';
+    return 'Otros';
+  }
+  function sizeLabel(sz){ return (sz==='700c'||sz==='Otros') ? sz : sz+'"'; }
+  function availableSizes(){
+    var order=['29','27.5','26','700c','Otros'], present={};
+    role('aros').forEach(function(p){ present[p._size]=true; });
+    return order.filter(function(s){ return present[s]; });
+  }
+  function holesOf(name){ var m=(name||'').match(/(\d+)\s*[Hh]/); return m?parseInt(m[1],10):null; }
+  function productHoleValues(p){
+    var arr=[]; if(p.options.length){ p.options[0].values.forEach(function(v){ var h=holesOf(v.name); if(h!=null) arr.push(h); }); } return arr;
+  }
+  function mazasCompatH(list, h){
+    if(h==null) return list;
+    return list.filter(function(p){ var hv=productHoleValues(p); if(!hv.length) return true; return hv.indexOf(h)>=0; });
+  }
+  function holesFromVal(p, val){
+    if(!p||!p.options.length||val==null) return null;
+    var h=null; p.options[0].values.forEach(function(v){ if(v.valueid===val) h=holesOf(v.name); }); return h;
+  }
+  // individual
+  function arosForSize(){ return role('aros').filter(function(p){ return p._size===sel.size; }); }
+  function selectedHoles(){ return holesFromVal(sel.aro, sel.aroVal); }
+  function mazasForCompat(list){ return mazasCompatH(list, selectedHoles()); }
+
+  // ---- Detección de modelo + tabla de largos ----
+  function aroModel(name){ var s=(name||'').toUpperCase(); if(s.indexOf('ENDURO')>=0) return 'ENDURO H30'; if(s.indexOf('ULTRA')>=0) return 'E30 ULTRA'; return null; }
+  function mazaModel(name){ var s=(name||'').toUpperCase(); if(s.indexOf('ULTRA')>=0) return 'ULTRA'; if(s.indexOf('TRAIL')>=0) return 'TRAIL'; return null; }
+  // Núcleo casado con la maza: solo el del mismo modelo (ULTRA con ULTRA, TRAIL con TRAIL)
+  function nucleosForMaza(maza){
+    var all = role('nucleo');
+    if(!maza) return [];
+    var m = mazaModel(maza.name);
+    if(!m) return all;
+    var f = all.filter(function(p){ return mazaModel(p.name)===m; });
+    return f.length ? f : all;
+  }
+  function largosFor(aroName, mazaName, size, pos, holes){
+    if(holes==null || !size || !aroName) return null;
+    var am=aroModel(aroName), tam=sizeLabel(size);
+    var posL = pos==='del'?'Delantera':'Trasera';
+    var mz = pos==='del'?'Maza delantera':mazaModel(mazaName);
+    var hoyos=holes+'H';
+    for(var i=0;i<TABLA_LARGOS.length;i++){
+      var r=TABLA_LARGOS[i];
+      if(r.aro===am && r.tam===tam && r.maza===mz && r.pos===posL && r.hoyos===hoyos) return {izq:r.izq, der:r.der};
+    }
+    return null;
+  }
+  function lookupLargos(){ return largosFor(sel.aro?sel.aro.name:null, sel.maza?sel.maza.name:null, sel.size, sel.tipo, selectedHoles()); }
+
+  function rayoProduct(){ return role('rayos').filter(function(p){ return p.options.length>0; })[0]||null; }
+  function golillaProduct(){ return role('rayos').filter(function(p){ return /GOLILLA/i.test(p.name); })[0]||null; }
+  function nipleProduct(){ return role('rayos').filter(function(p){ return !p.options.length && !/GOLILLA/i.test(p.name) && /NIP/i.test(p.name); })[0]||null; }
+  function rayoValueId(mm){
+    var rayo=rayoProduct(); if(!rayo||!rayo.options.length) return null;
+    var best=null,bestd=1e9;
+    rayo.options[0].values.forEach(function(v){ var n=parseInt(v.name,10); if(isNaN(n)) return; var d=Math.abs(n-mm); if(d<bestd){bestd=d;best=v.valueid;} });
+    return best;
+  }
+  function resetRayos(){ sel.rayosNiples=false; sel.golilla=false; sel.armado=null; sel.armadoVal=null; }
+
+  function loadProduct(p){
+    return fetch('/api/products/'+p.permalink+'.json',{headers:{Accept:'application/json'}})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var pj = d.product || d;
+        if(!p.options.length){
+          p._price = (pj.price||0) - (pj.discount||0);
+          p._stock = pj.stock_unlimited ? Infinity : (pj.stock||0);
+        } else {
+          p._vp = {}; p._vs = {};
+          (pj.variants||[]).forEach(function(v){
+            var vo = (v.options||[])[0];
+            if(vo){ p._vp[vo.id] = (v.price||0)-(v.discount||0);
+                    p._vs[vo.id] = v.stock_unlimited ? Infinity : (v.stock||0); }
+          });
+          p._price = (pj.price||0)-(pj.discount||0);
+        }
+      })
+      .catch(function(e){ p._err = true; p._price = p._price||0; });
+  }
+
+  function priceOf(p, valueid){ if(!p) return 0; if(!p.options.length) return p._price||0; return (p._vp&&p._vp[valueid]!=null)?p._vp[valueid]:(p._price||0); }
+  function stockOf(p, valueid){ if(!p) return 0; if(!p.options.length) return (p._stock!=null?p._stock:1); return (p._vs&&p._vs[valueid]!=null)?p._vs[valueid]:1; }
+
+  function priceLabelFor(stepKey, p){
+    if(stepKey==='nucleo') return '<span style="color:#1c6b3c;">Incluido con maza</span>';
+    if(stepKey==='armado'){
+      var nrm=p._price||0;
+      return (nrm>ARMADO_PROMO) ? '<s style="color:#bbb;font-weight:400;">'+fmt(nrm)+'</s> '+fmt(ARMADO_PROMO) : fmt(ARMADO_PROMO);
+    }
+    return p._price?fmt(p._price):'';
+  }
+
+  // Card genérica para INDIVIDUAL (lee sel[stepKey])
+  function cardProducts(stepKey, list, lockHoles){
+    if(!list.length) return '<div class="arm-empty">Aún no hay opciones en esta categoría.</div>';
+    var html = '<div class="arm-cards">';
+    list.forEach(function(p){
+      var isSel = sel[stepKey] && sel[stepKey].id === p.id;
+      html += '<div class="arm-card'+(isSel?' sel':'')+'" data-step="'+stepKey+'" data-id="'+p.id+'">'
+            + '<div class="nm">'+p.name+'</div>'
+            + '<div class="pr">'+priceLabelFor(stepKey,p)+'</div></div>';
+    });
+    html += '</div>';
+    var chosen = sel[stepKey];
+    if(chosen && chosen.options.length){
+      html += valsHtml(chosen, stepKey, 'data-vstep="'+stepKey+'"', sel[stepKey+'Val'], lockHoles);
+    }
+    return html;
+  }
+  // Render de chips de variante (compartido)
+  function valsHtml(chosen, stepKey, dataAttr, selectedVal, lockHoles){
+    var html='<div class="arm-vals">';
+    chosen.options[0].values.forEach(function(v){
+      var st = stockOf(chosen, v.valueid);
+      var hv = holesOf(v.name);
+      var incompat = (lockHoles!=null && hv!=null && hv!==lockHoles);
+      var out = st<=0 || incompat;
+      var vsel = selectedVal === v.valueid;
+      var tag = incompat ? ' (no compatible)' : (st<=0 ? ' (sin stock)' : '');
+      html += '<div class="arm-val'+(vsel?' sel':'')+(out?' out':'')+'" '+dataAttr+' data-val="'+v.valueid+'"'+(out?' data-out="1"':'')+'>'
+            + v.name + tag + '</div>';
+    });
+    return html+'</div>';
+  }
+
+  // Card para PAR (lee sel.par[wheel][stepKey])
+  function parCard(w, stepKey, list, lockHoles){
+    if(!list.length) return '<div class="arm-empty">Aún no hay opciones en esta categoría.</div>';
+    var st=sel.par[w];
+    var html='<div class="arm-cards">';
+    list.forEach(function(p){
+      var isSel = st[stepKey] && st[stepKey].id===p.id;
+      var pl = (stepKey==='nucleo')?'<span style="color:#1c6b3c;">Incluido con maza</span>':(p._price?fmt(p._price):'');
+      html+='<div class="arm-card'+(isSel?' sel':'')+'" data-pwheel="'+w+'" data-pstep="'+stepKey+'" data-id="'+p.id+'"><div class="nm">'+p.name+'</div><div class="pr">'+pl+'</div></div>';
+    });
+    html+='</div>';
+    var chosen=st[stepKey];
+    if(chosen && chosen.options.length){
+      html += valsHtml(chosen, stepKey, 'data-pvwheel="'+w+'" data-pvstep="'+stepKey+'"', st[stepKey+'Val'], lockHoles);
+    }
+    return html;
+  }
+
+  function largoText(lg){ return (lg.izq===lg.der) ? (lg.izq+' mm') : (lg.izq+' / '+lg.der+' mm'); }
+
+  // ----------------- RENDER -----------------
+  function tipoToggle(){
+    return '<div class="arm-toggle">'
+      + '<button data-tipo="del" class="'+(sel.tipo==='del'?'sel':'')+'">Delantera</button>'
+      + '<button data-tipo="tra" class="'+(sel.tipo==='tra'?'sel':'')+'">Trasera</button>'
+      + '<button data-tipo="par" class="'+(sel.tipo==='par'?'sel':'')+'">Juego (par)</button></div>';
+  }
+  function sizesHtmlIndiv(){
+    return availableSizes().map(function(sz){ return '<div class="arm-size'+(sel.size===sz?' sel':'')+'" data-size="'+sz+'">'+sizeLabel(sz)+'</div>'; }).join('');
+  }
+  function sizesHtmlPar(w){
+    return availableSizes().map(function(sz){ return '<div class="arm-size'+(sel.par[w].size===sz?' sel':'')+'" data-psize="'+sz+'" data-pwheel-size="'+w+'">'+sizeLabel(sz)+'</div>'; }).join('');
+  }
+
+  function rnBlock(headFn, lgList, hoyosTotal){
+    // lgList: array de largos para mostrar; hoyosTotal: unidades totales de rayos
+    var rayo=rayoProduct(), niple=nipleProduct(), g=golillaProduct();
+    var rn = ((rayo?(rayo._price||0):0)+(niple?(niple._price||0):0))*hoyosTotal;
+    var gz = (g?(g._price||0):0)*hoyosTotal;
+    var largoStr = lgList.map(function(x){ return x.label+': '+largoText(x.lg); }).join(' · ');
+    var html = headFn('Rayos y niples');
+    html += '<div class="arm-cards">';
+    html += '<div class="arm-card'+(sel.rayosNiples?' sel':'')+'" data-toggle="rn"><div class="nm">Rayos + niples</div>'
+          + '<small style="color:#999">'+largoStr+'</small><div class="pr">'+fmt(rn)+'</div></div>';
+    if(g){
+      html += '<div class="arm-card'+(sel.golilla?' sel':'')+'" data-toggle="golilla"><div class="nm">Golilla <span style="font-weight:400;color:#bbb">(opcional)</span></div>'
+            + '<small style="color:#1c6b3c">Ayuda a la vida útil de tu llanta</small><div class="pr">'+fmt(gz)+'</div></div>';
+    }
+    html += '</div></div>';
+    return html;
+  }
+
+  function buildIndivSteps(){
+    var mazaList = sel.tipo==='del' ? role('maza_del') : role('maza_tra');
+    var n=0; function head(t){ n++; return '<div class="arm-step"><h3><span class="n">'+n+'</span>'+t+'</h3>'; }
+    var steps='';
+    steps += head('Tipo de rueda')+tipoToggle()+'</div>';
+    steps += head('Tamaño de rueda')+'<div class="arm-sizes">'+sizesHtmlIndiv()+'</div></div>';
+    if(sel.size){ steps += head('Aro')+cardProducts('aro', arosForSize())+'</div>'; }
+    else { steps += head('Aro')+'<div class="arm-empty">Primero elige el tamaño de rueda.</div></div>'; }
+    steps += head('Maza '+(sel.tipo==='del'?'delantera':'trasera'))+cardProducts('maza', mazasForCompat(mazaList), selectedHoles())+'</div>';
+    if(sel.tipo==='tra'){ steps += head('Núcleo')+(sel.maza?cardProducts('nucleo', nucleosForMaza(sel.maza)):'<div class="arm-empty">Primero elige la maza trasera.</div>')+'</div>'; }
+    var lg = lookupLargos();
+    if(lg){ steps += rnBlock(head, [{label:'Largo', lg:lg}], selectedHoles()); }
+    else { steps += head('Rayos y niples')+'<div class="arm-empty">Elige aro, maza y hoyos para calcular los rayos.</div></div>'; }
+    if(sel.rayosNiples){ steps += head('Armado <span class="hint">(opcional)</span>')+cardProducts('armado', role('armado'))+'</div>'; }
+    else { steps += head('Armado <span class="hint">(opcional)</span>')+'<div class="arm-empty">Disponible al incluir rayos y niples.</div></div>'; }
+    return steps;
+  }
+
+  // largos para cada rueda del par
+  function parLargoD(){ var d=sel.par.d; return largosFor(d.aro?d.aro.name:null, null, d.size, 'del', holesFromVal(d.aro,d.aroVal)); }
+  function parLargoT(){ var t=sel.par.t; return largosFor(t.aro?t.aro.name:null, t.maza?t.maza.name:null, t.size, 'tra', holesFromVal(t.aro,t.aroVal)); }
+  function parHoyosTotal(){ var ht=holesFromVal(sel.par.t.aro, sel.par.t.aroVal)||0; return 32 + ht; }
+
+  function buildParSteps(){
+    var n=0; function head(t){ n++; return '<div class="arm-step"><h3><span class="n">'+n+'</span>'+t+'</h3>'; }
+    var steps='';
+    steps += head('Tipo de rueda')+tipoToggle()+'</div>';
+
+    // ---- Rueda delantera ----
+    steps += '<div class="arm-wheel">🔵 Rueda delantera (32H)</div>';
+    steps += head('Tamaño delantero')+'<div class="arm-sizes">'+sizesHtmlPar('d')+'</div></div>';
+    if(sel.par.d.size){ steps += head('Aro delantero')+parCard('d','aro', role('aros').filter(function(p){return p._size===sel.par.d.size;}), 32)+'</div>'; }
+    else { steps += head('Aro delantero')+'<div class="arm-empty">Elige el tamaño delantero.</div></div>'; }
+    steps += head('Maza delantera')+parCard('d','maza', mazasCompatH(role('maza_del'),32), 32)+'</div>';
+
+    // ---- Rueda trasera ----
+    steps += '<div class="arm-wheel">🟠 Rueda trasera</div>';
+    steps += head('Tamaño trasero')+'<div class="arm-sizes">'+sizesHtmlPar('t')+'</div></div>';
+    if(sel.par.t.size){ steps += head('Aro trasero <span class="hint">(elige 28H o 32H)</span>')+parCard('t','aro', role('aros').filter(function(p){return p._size===sel.par.t.size;}))+'</div>'; }
+    else { steps += head('Aro trasero')+'<div class="arm-empty">Elige el tamaño trasero.</div></div>'; }
+    var ht = holesFromVal(sel.par.t.aro, sel.par.t.aroVal);
+    steps += head('Maza trasera')+parCard('t','maza', mazasCompatH(role('maza_tra'), ht), ht)+'</div>';
+    steps += head('Núcleo (trasera)')+(sel.par.t.maza?parCard('t','nucleo', nucleosForMaza(sel.par.t.maza)):'<div class="arm-empty">Primero elige la maza trasera.</div>')+'</div>';
+
+    // ---- Común ----
+    var lgD=parLargoD(), lgT=parLargoT();
+    if(lgD && lgT){ steps += rnBlock(head, [{label:'Del', lg:lgD},{label:'Tra', lg:lgT}], parHoyosTotal()); }
+    else { steps += head('Rayos y niples')+'<div class="arm-empty">Completa ambas ruedas (aro, maza y hoyos) para calcular los rayos.</div></div>'; }
+    if(sel.rayosNiples){ steps += head('Armado <span class="hint">(x2 ruedas)</span>')+cardProducts('armado', role('armado'))+'</div>'; }
+    else { steps += head('Armado <span class="hint">(x2 ruedas)</span>')+'<div class="arm-empty">Disponible al incluir rayos y niples.</div></div>'; }
+    return steps;
+  }
+
+  function render(){
+    document.getElementById('arm-steps').innerHTML = (sel.tipo==='par') ? buildParSteps() : buildIndivSteps();
+    bind();
+    renderSummary();
+    update3D();
+  }
+
+  // ----------------- SUMMARY -----------------
+  function lineFor(stepKey, label){
+    var p = sel[stepKey]; if(!p) return '';
+    return lineForProd(p, sel[stepKey+'Val'], stepKey, label);
+  }
+  function lineForProd(p, valueid, kind, label){
+    if(!p) return '';
+    var valName = '';
+    if(p.options.length){ p.options[0].values.forEach(function(v){ if(v.valueid===valueid) valName=' · '+v.name; }); }
+    var valDisplay;
+    if(kind==='nucleo'){ valDisplay = '<span style="color:#1c6b3c;font-weight:600;">Incluido</span>'; }
+    else if(kind==='armado'){ var nrm=priceOf(p,valueid); valDisplay = (nrm>ARMADO_PROMO) ? '<s style="color:#bbb;font-weight:400;">'+fmt(nrm)+'</s> '+fmt(ARMADO_PROMO) : fmt(ARMADO_PROMO); }
+    else { valDisplay = fmt(priceOf(p, valueid)); }
+    return '<div class="arm-line"><span class="l">'+label+'<br><small style="color:#999">'+p.name+valName+'</small></span><span class="v">'+valDisplay+'</span></div>';
+  }
+  function rnPrice(hoyosTotal){ var rayo=rayoProduct(), niple=nipleProduct(); return ((rayo?(rayo._price||0):0)+(niple?(niple._price||0):0))*hoyosTotal; }
+  function golillaPrice(hoyosTotal){ var g=golillaProduct(); return (g?(g._price||0):0)*hoyosTotal; }
+
+  function complete(stepKey){
+    var p = sel[stepKey]; if(!p) return false;
+    if(p.options.length) return sel[stepKey+'Val']!=null && stockOf(p, sel[stepKey+'Val'])>0;
+    return true;
+  }
+  function parComplete(w, step){
+    var p=sel.par[w][step]; if(!p) return false;
+    if(p.options.length) return sel.par[w][step+'Val']!=null && stockOf(p, sel.par[w][step+'Val'])>0;
+    return true;
+  }
+
+  function renderSummary(){
+    var html='', total=0, ok=false;
+    if(sel.tipo==='par'){
+      var d=sel.par.d, t=sel.par.t;
+      html += '<div class="arm-line sub"><span class="l">🔵 Delantera</span><span class="v"></span></div>';
+      html += lineForProd(d.aro,d.aroVal,'aro','Aro');
+      html += lineForProd(d.maza,d.mazaVal,'maza','Maza');
+      html += '<div class="arm-line sub"><span class="l">🟠 Trasera</span><span class="v"></span></div>';
+      html += lineForProd(t.aro,t.aroVal,'aro','Aro');
+      html += lineForProd(t.maza,t.mazaVal,'maza','Maza');
+      html += lineForProd(t.nucleo,t.nucleoVal,'nucleo','Núcleo');
+      var lgD=parLargoD(), lgT=parLargoT(), htot=parHoyosTotal();
+      if(sel.rayosNiples && lgD && lgT){
+        html += '<div class="arm-line"><span class="l">Rayos + niples<br><small style="color:#999">Del '+largoText(lgD)+' · Tra '+largoText(lgT)+'</small></span><span class="v">'+fmt(rnPrice(htot))+'</span></div>';
+      }
+      if(sel.golilla){ html += '<div class="arm-line"><span class="l">Golilla<br><small style="color:#999">×'+htot+'</small></span><span class="v">'+fmt(golillaPrice(htot))+'</span></div>'; }
+      if(sel.armado){ html += '<div class="arm-line"><span class="l">Armado<br><small style="color:#999">x2 ruedas</small></span><span class="v">'+fmt(ARMADO_PROMO*2)+'</span></div>'; }
+      total = priceOf(d.aro,d.aroVal)+priceOf(d.maza,d.mazaVal)+priceOf(t.aro,t.aroVal)+priceOf(t.maza,t.mazaVal)
+            + (sel.rayosNiples&&lgD&&lgT?rnPrice(htot):0) + (sel.golilla?golillaPrice(htot):0) + (sel.armado?ARMADO_PROMO*2:0);
+      ok = parComplete('d','aro')&&parComplete('d','maza')&&parComplete('t','aro')&&parComplete('t','maza')&&parComplete('t','nucleo');
+    } else {
+      if(sel.size) html += '<div class="arm-line"><span class="l">Tamaño</span><span class="v">'+sizeLabel(sel.size)+'</span></div>';
+      html += lineFor('aro','Aro');
+      html += lineFor('maza', 'Maza '+(sel.tipo==='del'?'delantera':'trasera'));
+      html += lineFor('nucleo','Núcleo');
+      var lg=lookupLargos(), h=selectedHoles()||0;
+      if(sel.rayosNiples && lg){ html += '<div class="arm-line"><span class="l">Rayos + niples<br><small style="color:#999">Largo '+largoText(lg)+' · '+h+' u.</small></span><span class="v">'+fmt(rnPrice(h))+'</span></div>'; }
+      if(sel.golilla){ html += '<div class="arm-line"><span class="l">Golilla<br><small style="color:#999">×'+(h||1)+'</small></span><span class="v">'+fmt(golillaPrice(h||1))+'</span></div>'; }
+      html += lineFor('armado','Armado');
+      total = priceOf(sel.aro,sel.aroVal)+priceOf(sel.maza,sel.mazaVal)+(sel.armado?ARMADO_PROMO:0)
+            + (sel.rayosNiples&&lg?rnPrice(h):0) + (sel.golilla?golillaPrice(h||1):0);
+      ok = complete('aro') && complete('maza') && (sel.tipo!=='tra' || complete('nucleo'));
+    }
+    if(!html) html = '<div class="arm-empty">Aún no has elegido nada.</div>';
+    document.getElementById('arm-summary').innerHTML = html;
+    document.getElementById('arm-total').textContent = fmt(total);
+    document.getElementById('arm-add').disabled = !ok;
+  }
+
+  // ----------------- BIND -----------------
+  function autoVal(p, st, key, want){
+    if(!p.options.length) return;
+    p.options[0].values.forEach(function(v){
+      if(st[key]!=null) return;
+      var hv=holesOf(v.name);
+      var okc=(want==null)||(hv==null)||(hv===want);
+      if(okc && stockOf(p,v.valueid)>0) st[key]=v.valueid;
+    });
+  }
+
+  function bind(){
+    document.querySelectorAll('[data-tipo]').forEach(function(b){
+      b.onclick=function(){
+        sel.tipo=this.getAttribute('data-tipo');
+        if(sel.tipo==='del'){ sel.maza=null; sel.mazaVal=null; sel.nucleo=null; sel.nucleoVal=null; }
+        if(sel.tipo==='tra'){ sel.maza=null; sel.mazaVal=null; }
+        resetRayos(); render();
+      };
+    });
+    // INDIVIDUAL
+    document.querySelectorAll('[data-size]').forEach(function(b){
+      b.onclick=function(){ sel.size=this.getAttribute('data-size'); sel.aro=null; sel.aroVal=null; sel.maza=null; sel.mazaVal=null; resetRayos(); render(); };
+    });
+    document.querySelectorAll('.arm-card[data-step]').forEach(function(c){
+      c.onclick=function(){
+        var step=this.getAttribute('data-step'); var id=parseInt(this.getAttribute('data-id'),10);
+        var list = step==='maza' ? (sel.tipo==='del'?role('maza_del'):role('maza_tra'))
+                 : step==='aro'?role('aros'):step==='nucleo'?role('nucleo'):role('armado');
+        var p=null; list.forEach(function(x){ if(x.id===id) p=x; }); if(!p) return;
+        sel[step]=p; sel[step+'Val']=null;
+        autoVal(p, sel, step+'Val', step==='maza'?selectedHoles():null);
+        if(step==='aro'){ sel.maza=null; sel.mazaVal=null; resetRayos(); }
+        if(step==='maza'){ if(sel.nucleo && mazaModel(sel.nucleo.name)!==mazaModel(p.name)){ sel.nucleo=null; sel.nucleoVal=null; } resetRayos(); }
+        render();
+      };
+    });
+    document.querySelectorAll('[data-vstep]').forEach(function(v){
+      v.onclick=function(){ if(this.getAttribute('data-out')) return; var s=this.getAttribute('data-vstep'); sel[s+'Val']=parseInt(this.getAttribute('data-val'),10); if(s==='aro'){ sel.maza=null; sel.mazaVal=null; resetRayos(); } render(); };
+    });
+    // PAR
+    document.querySelectorAll('[data-psize]').forEach(function(b){
+      b.onclick=function(){ var w=this.getAttribute('data-pwheel-size'); var st=sel.par[w]; st.size=this.getAttribute('data-psize'); st.aro=null; st.aroVal=null; st.maza=null; st.mazaVal=null; resetRayos(); render(); };
+    });
+    document.querySelectorAll('[data-pstep]').forEach(function(c){
+      c.onclick=function(){
+        var w=this.getAttribute('data-pwheel'), step=this.getAttribute('data-pstep'), id=parseInt(this.getAttribute('data-id'),10);
+        var list = step==='aro'?role('aros') : step==='maza'?(w==='d'?role('maza_del'):role('maza_tra')) : role('nucleo');
+        var p=null; list.forEach(function(x){ if(x.id===id) p=x; }); if(!p) return;
+        var st=sel.par[w];
+        st[step]=p; st[step+'Val']=null;
+        var want=null;
+        if(step==='aro' && w==='d') want=32;
+        if(step==='maza') want=holesFromVal(st.aro, st.aroVal);
+        autoVal(p, st, step+'Val', want);
+        if(step==='aro'){ st.maza=null; st.mazaVal=null; resetRayos(); }
+        if(step==='maza'){ if(w==='t' && st.nucleo && mazaModel(st.nucleo.name)!==mazaModel(p.name)){ st.nucleo=null; st.nucleoVal=null; } resetRayos(); }
+        render();
+      };
+    });
+    document.querySelectorAll('[data-pvstep]').forEach(function(v){
+      v.onclick=function(){ if(this.getAttribute('data-out')) return; var w=this.getAttribute('data-pvwheel'), s=this.getAttribute('data-pvstep'); var st=sel.par[w]; st[s+'Val']=parseInt(this.getAttribute('data-val'),10); if(s==='aro'){ st.maza=null; st.mazaVal=null; resetRayos(); } render(); };
+    });
+    // COMÚN (toggles)
+    document.querySelectorAll('[data-toggle]').forEach(function(b){
+      b.onclick=function(){
+        var t=this.getAttribute('data-toggle');
+        if(t==='rn'){ sel.rayosNiples=!sel.rayosNiples; if(!sel.rayosNiples){ sel.armado=null; sel.armadoVal=null; } }
+        if(t==='golilla'){ sel.golilla=!sel.golilla; }
+        render();
+      };
+    });
+  }
+
+  // ----------------- ADD TO CART -----------------
+  function pushRayos(items, lg, holes){
+    var rayo=rayoProduct(); if(!rayo||!lg||!holes) return;
+    var oid=rayo.options[0].option_id;
+    if(lg.izq===lg.der){ var vid=rayoValueId(lg.izq); if(vid){ var o={}; o[oid]=vid; items.push([rayo.id, holes, o]); } }
+    else {
+      var half=Math.round(holes/2);
+      var vi=rayoValueId(lg.izq), vd=rayoValueId(lg.der);
+      if(vi){ var oi={}; oi[oid]=vi; items.push([rayo.id, half, oi]); }
+      if(vd){ var od={}; od[oid]=vd; items.push([rayo.id, holes-half, od]); }
+    }
+  }
+  function mkOpt(p, val){ var o={}; if(p.options.length && val!=null) o[p.options[0].option_id]=val; return o; }
+
+  function addToCart(){
+    var msg=document.getElementById('arm-msg'); msg.className='arm-msg'; msg.textContent='';
+    var items=[], err=null;
+
+    if(sel.tipo==='par'){
+      var d=sel.par.d, t=sel.par.t;
+      if(!parComplete('d','aro')||!parComplete('d','maza')) err='Completa la rueda delantera (aro y maza).';
+      else if(!parComplete('t','aro')||!parComplete('t','maza')) err='Completa la rueda trasera (aro y maza).';
+      else if(!parComplete('t','nucleo')) err='En la rueda trasera el núcleo es obligatorio.';
+      if(!err){
+        items.push([d.aro.id, 1, mkOpt(d.aro,d.aroVal)]);
+        items.push([d.maza.id, 1, mkOpt(d.maza,d.mazaVal)]);
+        items.push([t.aro.id, 1, mkOpt(t.aro,t.aroVal)]);
+        items.push([t.maza.id, 1, mkOpt(t.maza,t.mazaVal)]);
+        items.push([t.nucleo.id, 1, mkOpt(t.nucleo,t.nucleoVal)]);
+        var lgD=parLargoD(), lgT=parLargoT();
+        var ht=holesFromVal(t.aro,t.aroVal)||0;
+        if(sel.rayosNiples && lgD && lgT){
+          pushRayos(items, lgD, 32);
+          pushRayos(items, lgT, ht);
+          var niple=nipleProduct(); if(niple) items.push([niple.id, 32+ht, {}]);
+        }
+        if(sel.golilla){ var g=golillaProduct(); if(g) items.push([g.id, 32+ht, {}]); }
+        if(sel.armado){ items.push([sel.armado.id, 2, mkOpt(sel.armado,sel.armadoVal)]); }
+      }
+    } else {
+      ['aro','maza','nucleo','armado'].forEach(function(k){
+        var p=sel[k]; if(!p) return;
+        if(p.options.length && sel[k+'Val']==null) return;
+        items.push([p.id, 1, mkOpt(p, sel[k+'Val'])]);
+      });
+      var h = selectedHoles()||0, lg = lookupLargos();
+      if(sel.rayosNiples && lg && h){ pushRayos(items, lg, h); var nip=nipleProduct(); if(nip) items.push([nip.id, h, {}]); }
+      if(sel.golilla && h){ var go=golillaProduct(); if(go) items.push([go.id, h, {}]); }
+      if(!complete('aro') || !complete('maza')) err='Elige al menos el aro y la maza.';
+      else if(sel.tipo==='tra' && !complete('nucleo')) err='En la rueda trasera el núcleo es obligatorio.';
+    }
+
+    if(err){ msg.className='arm-msg err'; msg.textContent=err; return; }
+    var btn=document.getElementById('arm-add'); btn.disabled=true; btn.textContent='Agregando…';
+    if(typeof Jumpseller==='undefined' || !Jumpseller.addMultipleProductsToCart){
+      msg.className='arm-msg err'; msg.textContent='No se pudo acceder al carro. Recarga la página e intenta de nuevo.'; btn.disabled=false; btn.textContent='Agregar al carro'; return;
+    }
+    Jumpseller.addMultipleProductsToCart(items, { callback: function(data){
+      if(data && (data.error || data.errors)){
+        msg.className='arm-msg err'; msg.textContent='Hubo un problema agregando al carro: '+(data.error||JSON.stringify(data.errors));
+        btn.disabled=false; btn.textContent='Agregar al carro'; return;
+      }
+      msg.className='arm-msg ok'; msg.textContent='¡Listo! Te llevamos al carro…';
+      setTimeout(function(){ window.location.href='/cart'; }, 700);
+    }});
+  }
+
+  // ----------------- VISOR 3D -----------------
+  // Los .glb y el visor viven en GitHub, servidos por el CDN jsDelivr.
+  // Reemplaza USUARIO y REPO por los tuyos.
+  var BASE_3D = 'https://cdn.jsdelivr.net/gh/Farinabikestore/715-3d@main/';
+
+  function color3D(name){
+    var s=(name||'').toUpperCase();
+    if(/NEGR|BLACK|BLK/.test(s)) return 'negro';
+    if(/SILVER|PLATA|PLATEAD|SLV/.test(s)) return 'silver';
+    return null;
+  }
+  function aro3D(p){
+    if(!p) return null;
+    var m = aroModel(p.name);
+    if(m === 'E30 ULTRA') return 'ultra';                 // el aro ULTRA va en un solo color
+    if(m === 'ENDURO H30'){ var c = color3D(p.name); return c ? 'h30-'+c : null; }
+    return null;
+  }
+  function maza3D(p){
+    if(!p) return null;
+    var m = mazaModel(p.name), c = color3D(p.name);
+    return (m && c) ? m.toLowerCase()+'-'+c : null;
+  }
+  function nucleo3D(p, val){
+    if(!p) return null;
+    var n='';
+    if(p.options.length && val!=null){
+      p.options[0].values.forEach(function(v){ if(v.valueid===val) n=v.name; });
+    }
+    var s=((n||'')+' '+p.name).toUpperCase();
+    if(/MICRO|SPLINE|\bMS\b/.test(s)) return 'ms';
+    if(/\bXD\b/.test(s)) return 'xd';
+    if(/\bHG\b|SHIMANO/.test(s)) return 'hg';
+    return null;
+  }
+
+  function update3D(){
+    if(!window.ARM3D) return;
+    // Sólo hay modelos 3D de la rueda trasera (falta la maza delantera).
+    if(sel.tipo === 'del'){ ARM3D.msg('El 3D está disponible en la rueda trasera.'); return; }
+    var st = (sel.tipo === 'par') ? sel.par.t : sel;
+    var a = aro3D(st.aro), m = maza3D(st.maza);
+    if(!a || !m){ ARM3D.msg('Elige el aro y la maza para ver tu rueda en 3D.'); return; }
+    ARM3D.set({ aro:a, maza:m, nucleo:nucleo3D(st.nucleo, st.nucleoVal) });
+  }
+
+  // En pantallas chicas el visor sube arriba de los pasos.
+  function place3D(){
+    var v=document.getElementById('arm-3d'), g=document.getElementById('arm-grid'),
+        st=document.getElementById('arm-steps'), sd=document.querySelector('.arm-side');
+    if(!v||!g||!st||!sd) return;
+    if(window.innerWidth<=840){ if(v.parentNode!==g) g.insertBefore(v, st); }
+    else { if(v.parentNode!==sd) sd.insertBefore(v, sd.firstChild); }
+  }
+
+  function boot3D(){
+    var s=document.createElement('script');
+    s.src = BASE_3D + 'visor715.js';
+    s.onload = function(){
+      var box=document.getElementById('arm-3d');
+      if(box && window.ARM3D){ ARM3D.init(box, BASE_3D); place3D(); update3D(); }
+    };
+    s.onerror = function(){ console.warn('[armador] no se pudo cargar el visor 3D'); };
+    document.head.appendChild(s);
+    var t; window.addEventListener('resize', function(){ clearTimeout(t); t=setTimeout(place3D,150); });
+  }
+
+  // Modo inicial según la URL: ?tipo=delantera | trasera | par
+  (function(){
+    var t=(new URLSearchParams(window.location.search).get('tipo')||'').toLowerCase();
+    if(t.indexOf('del')===0) sel.tipo='del';
+    else if(t.indexOf('tra')===0) sel.tipo='tra';
+    else if(t==='par'||t.indexOf('jue')===0||t.indexOf('set')===0) sel.tipo='par';
+  })();
+
+  var allProducts=[];
+  DATA.forEach(function(s){ s.products.forEach(function(p){ allProducts.push(p); }); });
+  role('aros').forEach(function(p){ p._size = sizeOf(p.name); });
+  Promise.all(allProducts.map(loadProduct)).then(function(){
+    if(availableSizes().length===1){ sel.size = availableSizes()[0]; }
+    document.getElementById('arm-loading').style.display='none';
+    document.getElementById('arm-grid').style.display='grid';
+    document.getElementById('arm-add').onclick=addToCart;
+    render();
+    boot3D();
+  });
+})();
+</script>
+
+{{ index_for_components }}
+</main>
+
+{{ index_for_bottom_components }}
